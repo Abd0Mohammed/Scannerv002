@@ -1,0 +1,160 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User profile validation
+    function isValidUser(data) {
+      return data.userId is string && data.userId == request.auth.uid
+        && data.email is string && data.email.size() <= 256
+        && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128))
+        && (!('wpscanApiKey' in data) || (data.wpscanApiKey is string && data.wpscanApiKey.size() <= 128))
+        && (!('onboardingCompleted' in data) || data.onboardingCompleted is bool)
+        && (!('authProvider' in data) || (data.authProvider is string && data.authProvider.size() <= 64))
+        && data.createdAt is string && data.createdAt.size() <= 64;
+    }
+
+    // Scan result validation
+    function isValidScan(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.targetUrl is string && data.targetUrl.size() <= 512
+        && data.hostname is string && data.hostname.size() <= 256
+        && data.score is number && data.score >= 0 && data.score <= 100
+        && data.grade is string && data.grade.size() <= 8
+        && data.createdAt is string && data.createdAt.size() <= 64;
+    }
+
+    // Monitored site validation
+    function isValidSite(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.url is string && data.url.size() <= 512
+        && data.hostname is string && data.hostname.size() <= 256
+        && data.createdAt is string && data.createdAt.size() <= 64;
+    }
+
+    // V2 Scan validation
+    function isValidV2Scan(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.version is string && data.version == 'v2'
+        && data.mode is string && data.mode in ['url', 'zip', 'agent']
+        && data.target is string && data.target.size() <= 512
+        && data.score is number && data.score >= 0 && data.score <= 100
+        && data.grade is string && data.grade.size() <= 8
+        && data.createdAt is string && data.createdAt.size() <= 64;
+    }
+
+    // V2 Agent validation
+    function isValidV2Agent(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 128
+        && data.environment is string && data.environment.size() <= 64
+        && data.status is string && data.status in ['registered', 'active', 'stale', 'revoked']
+        && data.tokenPrefix is string && data.tokenPrefix.size() <= 64
+        && data.createdAt is string && data.createdAt.size() <= 64;
+    }
+
+    // V2 Audit Log validation
+    function isValidV2AuditLog(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.action is string && data.action.size() <= 64
+        && data.target is string && data.target.size() <= 512
+        && data.mode is string && data.mode.size() <= 32
+        && data.status is string && data.status.size() <= 32
+        && data.detail is string && data.detail.size() <= 1000
+        && data.createdAt is string && data.createdAt.size() <= 64;
+    }
+
+    // User collection rules
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Users cannot list other users
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming())
+                    && incoming().userId == existing().userId;
+      allow delete: if isOwner(userId);
+
+      // User's V1 Scans Subcollection
+      match /scans/{scanId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(scanId) && isValidScan(incoming());
+        allow update: if isOwner(userId) && isValidScan(incoming())
+                      && incoming().userId == existing().userId
+                      && incoming().id == existing().id;
+        allow delete: if isOwner(userId);
+      }
+
+      // User's V1 Monitored Sites Subcollection
+      match /sites/{siteId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(siteId) && isValidSite(incoming());
+        allow update: if isOwner(userId) && isValidSite(incoming())
+                      && incoming().userId == existing().userId
+                      && incoming().id == existing().id;
+        allow delete: if isOwner(userId);
+      }
+
+      // User's V2 Universal Scans Subcollection
+      match /v2_scans/{scanId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(scanId) && isValidV2Scan(incoming());
+        allow update: if isOwner(userId) && isValidV2Scan(incoming())
+                      && incoming().userId == existing().userId
+                      && incoming().id == existing().id;
+        allow delete: if isOwner(userId);
+      }
+
+      // User's V2 Authorized Server Agents Subcollection
+      match /v2_agents/{agentId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(agentId) && isValidV2Agent(incoming());
+        allow update: if isOwner(userId) && isValidV2Agent(incoming())
+                      && incoming().userId == existing().userId
+                      && incoming().id == existing().id;
+        allow delete: if isOwner(userId);
+      }
+
+      // User's V2 Immutable Security Audit Logs
+      match /v2_audit_logs/{logId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(logId) && isValidV2AuditLog(incoming());
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+  }
+}

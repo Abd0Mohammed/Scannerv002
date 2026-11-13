@@ -1,0 +1,6 @@
+{
+  "name": "WP Sentinel",
+  "description": "Production-grade WordPress Security Intelligence & Passive Vulnerability Scanner with automated auditing, risk scoring, and AI remediation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

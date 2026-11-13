@@ -1,0 +1,228 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and scanning preferences",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique Firebase Auth UID"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name"
+        },
+        "wpscanApiKey": {
+          "type": "string",
+          "description": "Optional WPScan API token for deep vulnerability queries",
+          "maxLength": 128
+        },
+        "onboardingCompleted": {
+          "type": "boolean",
+          "description": "Whether the user completed or dismissed initial onboarding"
+        },
+        "authProvider": {
+          "type": "string",
+          "description": "Authentication provider identifier",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation ISO timestamp"
+        }
+      },
+      "required": ["userId", "email", "createdAt"]
+    },
+    "Scan": {
+      "title": "Scan",
+      "description": "WordPress security audit scan result",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique scan identifier"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID"
+        },
+        "targetUrl": {
+          "type": "string",
+          "description": "Scanned target website URL",
+          "maxLength": 512
+        },
+        "hostname": {
+          "type": "string",
+          "description": "Target hostname",
+          "maxLength": 256
+        },
+        "isWordPress": {
+          "type": "boolean",
+          "description": "Whether WordPress was detected"
+        },
+        "wpVersion": {
+          "type": "string",
+          "description": "Detected WordPress version or unknown",
+          "maxLength": 32
+        },
+        "score": {
+          "type": "number",
+          "description": "Calculated security score 0-100"
+        },
+        "grade": {
+          "type": "string",
+          "description": "Letter grade A+, A, B, C, D, or F",
+          "maxLength": 4
+        },
+        "findings": {
+          "type": "array",
+          "description": "List of security findings identified during passive audit"
+        },
+        "categories": {
+          "type": "object",
+          "description": "Categorical scores breakdown"
+        },
+        "durationMs": {
+          "type": "number",
+          "description": "Scan duration in milliseconds"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["id", "userId", "targetUrl", "hostname", "score", "grade", "createdAt"]
+    },
+    "MonitoredSite": {
+      "title": "MonitoredSite",
+      "description": "User saved and monitored WordPress website",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique site ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID"
+        },
+        "url": {
+          "type": "string",
+          "description": "Target URL",
+          "maxLength": 512
+        },
+        "hostname": {
+          "type": "string",
+          "description": "Hostname",
+          "maxLength": 256
+        },
+        "verified": {
+          "type": "boolean",
+          "description": "Whether site ownership has been verified"
+        },
+        "verificationToken": {
+          "type": "string",
+          "description": "Verification token for meta tag or DNS TXT",
+          "maxLength": 128
+        },
+        "lastScore": {
+          "type": "number",
+          "description": "Latest scan score"
+        },
+        "lastGrade": {
+          "type": "string",
+          "description": "Latest grade",
+          "maxLength": 4
+        },
+        "lastScannedAt": {
+          "type": "string",
+          "description": "Last scan date"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["id", "userId", "url", "hostname", "createdAt"]
+    },
+    "V2Scan": {
+      "title": "V2Scan",
+      "description": "Site Sentinel V2 universal scan result (URL crawl, ZIP static analysis, or Agent posture)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "version": { "type": "string", "maxLength": 8 },
+        "mode": { "type": "string", "enum": ["url", "zip", "agent"] },
+        "target": { "type": "string", "maxLength": 512 },
+        "hostname": { "type": "string", "maxLength": 256 },
+        "score": { "type": "number" },
+        "grade": { "type": "string", "maxLength": 4 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "userId", "version", "mode", "target", "score", "grade", "createdAt"]
+    },
+    "V2Agent": {
+      "title": "V2Agent",
+      "description": "Registered Site Sentinel V2 read-only inspection agent metadata (hashed token stored server-side)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "environment": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["registered", "active", "stale", "revoked"] },
+        "tokenPrefix": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "userId", "name", "environment", "status", "tokenPrefix", "createdAt"]
+    },
+    "V2AuditLog": {
+      "title": "V2AuditLog",
+      "description": "Immutable Site Sentinel V2 security audit trail entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "action": { "type": "string", "maxLength": 64 },
+        "target": { "type": "string", "maxLength": 512 },
+        "mode": { "type": "string", "maxLength": 32 },
+        "status": { "type": "string", "maxLength": 32 },
+        "detail": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "userId", "action", "target", "mode", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile document accessible only by the user"
+    },
+    "/users/{userId}/scans/{scanId}": {
+      "schema": "Scan",
+      "description": "V1 WordPress security audit records belonging strictly to the user"
+    },
+    "/users/{userId}/sites/{siteId}": {
+      "schema": "MonitoredSite",
+      "description": "V1 monitored sites belonging strictly to the user"
+    },
+    "/users/{userId}/v2_scans/{scanId}": {
+      "schema": "V2Scan",
+      "description": "V2 universal security audit records belonging strictly to the user"
+    },
+    "/users/{userId}/v2_agents/{agentId}": {
+      "schema": "V2Agent",
+      "description": "V2 authorized server agent records belonging strictly to the user"
+    },
+    "/users/{userId}/v2_audit_logs/{logId}": {
+      "schema": "V2AuditLog",
+      "description": "V2 immutable security audit logs belonging strictly to the user"
+    }
+  }
+}
